@@ -24,22 +24,17 @@ const applicationSchema = new mongoose.Schema(
   {
     applicationId: {
       type: String,
-      unique: true,
-      index: true,
     },
 
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true,
-      index: true,
     },
 
     studentId: {
       type: String,
       required: true,
-      index: true,
     },
     marks: {
       type: Number,
@@ -62,7 +57,6 @@ const applicationSchema = new mongoose.Schema(
       type: String,
       enum: ["PENDING", "ALLOCATED", "REJECTED"],
       default: "PENDING",
-      index: true,
     },
 
     allocationStatus: {
@@ -73,7 +67,6 @@ const applicationSchema = new mongoose.Schema(
     applicationDate: {
       type: Date,
       default: Date.now,
-      index: true,
     },
   },
   {

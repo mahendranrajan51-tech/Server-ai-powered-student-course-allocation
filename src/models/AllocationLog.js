@@ -6,27 +6,23 @@ const allocationLogSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Allocation",
       required: true,
-      index: true,
     },
 
     application: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Application",
       required: true,
-      index: true,
     },
 
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     studentId: {
       type: String,
       required: true,
-      index: true,
     },
 
     course: {

@@ -5,8 +5,6 @@ const userSchema = new mongoose.Schema(
   {
     userId: {
       type: String,
-      unique: true,
-      index: true,
     },
 
     name: {
@@ -18,8 +16,6 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: true,
-      index: true,
       lowercase: true,
       trim: true,
     },
@@ -37,7 +33,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["GENERAL", "OBC", "SC", "ST"],
       required: true,
-      index: true,
     },
     phone: {
       type: String,
@@ -48,7 +43,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["ADMIN", "STUDENT"],
       default: "STUDENT",
-      index: true,
     },
 
     isActive: {

@@ -1,8 +1,9 @@
+const path = require("path");
 const { connectDB } = require("./db/db");
 const mongoose = require("mongoose");
 const User = require("./models/User");
 const { hashPassword } = require("./utils/helper");
-require("dotenv").config({ path: path.join(__dirname, "../.env") });
+require("dotenv").config({ path: path.join(__dirname, "../.env"), quiet: true });
 
 const run = async () => {
   await connectDB();
@@ -18,6 +19,9 @@ const run = async () => {
     name: "University Admin",
     email: adminEmail,
     password: await hashPassword(adminPassword),
+    gender: "MALE",
+    category: "GENERAL",
+    phone: "1234567890",
     role: "ADMIN",
   });
   console.log("\n✅ Seed Data Complete!\n");

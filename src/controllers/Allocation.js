@@ -300,6 +300,10 @@ const getAllAllocations = async (req, res, next) => {
 
     const filter = {};
 
+    if (req.user.role === "STUDENT") {
+      filter.student = req.user._id;
+    }
+
     // Search
     if (search) {
       filter.$or = [
@@ -382,6 +386,15 @@ const getAllocationById = async (req, res, next) => {
     if (!allocation) {
       const error = new Error("Allocation not found.");
       error.statusCode = 404;
+      throw error;
+    }
+
+    if (
+      req.user.role === "STUDENT" &&
+      allocation.student._id.toString() !== req.user._id.toString()
+    ) {
+      const error = new Error("Forbidden.");
+      error.statusCode = 403;
       throw error;
     }
 

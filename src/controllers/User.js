@@ -4,13 +4,14 @@ const {
   hashPassword,
   comparePassword,
   generateJWT,
+  cookieOptions,
 } = require("../utils/helper");
 
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, gender, category, phone } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !gender || !category || !phone) {
       const error = new Error("All fields are required.");
       error.statusCode = 400;
       throw error;
@@ -30,6 +31,9 @@ const registerUser = async (req, res, next) => {
       name,
       email,
       password: hashedPassword,
+      gender,
+      category,
+      phone,
       role: "STUDENT",
     });
 

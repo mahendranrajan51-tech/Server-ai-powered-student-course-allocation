@@ -1,5 +1,5 @@
 const express = require("express");
-const userRouter = express.userRouter();
+const userRouter = express.Router();
 const { protect, authorize } = require("../middlewares/authMiddleware");
 const {
   registerUser,

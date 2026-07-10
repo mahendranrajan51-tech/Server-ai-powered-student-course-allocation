@@ -8,7 +8,7 @@ const {
 } = require("../controllers/Allocation");
 
 allocationRouter.post("/", protect, authorize("ADMIN"), allocateCourses);
-allocationRouter.get("/", protect, authorize("ADMIN"), getAllAllocations);
-allocationRouter.get("/:id", protect, authorize("ADMIN"), getAllocationById);
+allocationRouter.get("/", protect, getAllAllocations);
+allocationRouter.get("/:id", protect, getAllocationById);
 
 module.exports = { allocationRouter };

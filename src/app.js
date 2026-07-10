@@ -3,7 +3,7 @@ const path = require("path");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
-require("dotenv").config({ path: path.join(__dirname, "../.env") });
+require("dotenv").config({ path: path.join(__dirname, "../.env"), quiet: true });
 const app = express();
 const { connectDB } = require("./db/db.js");
 connectDB();

@@ -5,42 +5,34 @@ const allocationSchema = new mongoose.Schema(
   {
     allocationId: {
       type: String,
-      unique: true,
-      index: true,
     },
 
     application: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Application",
       required: true,
-      unique: true,
-      index: true,
     },
 
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     studentId: {
       type: String,
       required: true,
-      index: true,
     },
 
     course: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
       default: null,
-      index: true,
     },
 
     courseId: {
       type: String,
       default: null,
-      index: true,
     },
 
     allocatedPreference: {
@@ -52,14 +44,12 @@ const allocationSchema = new mongoose.Schema(
     marks: {
       type: Number,
       required: true,
-      index: true,
     },
 
     allocationStatus: {
       type: String,
       enum: ["ALLOCATED", "REJECTED"],
       required: true,
-      index: true,
     },
 
     remarks: {

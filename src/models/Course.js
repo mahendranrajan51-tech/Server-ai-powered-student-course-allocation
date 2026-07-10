@@ -36,14 +36,11 @@ const courseSchema = new mongoose.Schema(
   {
     courseId: {
       type: String,
-      unique: true,
-      index: true,
     },
     courseCode: {
       type: String,
       required: true,
       uppercase: true,
-      unique: true,
       trim: true,
     },
 
