@@ -1,0 +1,401 @@
+const Allocation = require("../models/Allocation");
+const AllocationLog = require("../models/AllocationLog");
+const Application = require("../models/Application");
+const Course = require("../models/Course");
+const User = require("../models/User");
+const mongoose = require("mongoose");
+
+const allocateCourses = async (req, res, next) => {
+  try {
+    // Prevent running allocation twice
+    const allocationExists = await Allocation.findOne();
+
+    if (allocationExists) {
+      const error = new Error("Allocation has already been completed.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Get all pending applications
+    const applications = await Application.find({
+      status: "PENDING",
+      allocationStatus: false,
+    })
+      .populate("student")
+      .sort({
+        marks: -1,
+        applicationDate: 1,
+      });
+
+    if (!applications.length) {
+      const error = new Error("No pending applications found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    let allocatedCount = 0;
+    let rejectedCount = 0;
+
+    // Process every application
+    for (const application of applications) {
+      const session = await mongoose.startSession();
+
+      try {
+        session.startTransaction();
+
+        let allocated = false;
+
+        const userDetails = await User.findById(
+          application.student._id,
+        ).session(session);
+
+        if (!userDetails) {
+          throw new Error("Student details not found.");
+        }
+        const category = userDetails.category;
+        const allocation = await Allocation.create(
+          [
+            {
+              application: application._id,
+              student: application.student._id,
+              studentId: application.studentId,
+              marks: application.marks,
+              allocationStatus: "REJECTED",
+              allocatedBy: req.user._id,
+            },
+          ],
+          {
+            session,
+          },
+        );
+
+        const allocationDoc = allocation[0];
+
+        await AllocationLog.create(
+          [
+            {
+              allocation: allocationDoc._id,
+              application: application._id,
+              student: application.student._id,
+              studentId: application.studentId,
+              action: "CHECKING",
+              message: "Started allocation.",
+              createdBy: req.user._id,
+            },
+          ],
+          {
+            session,
+          },
+        );
+
+        // Check preference one by one
+        const preferences = [...application.preferences].sort(
+          (a, b) => a.priority - b.priority,
+        );
+
+        for (const preference of preferences) {
+          const course = await Course.findById(preference.course).session(
+            session,
+          );
+
+          if (!course || !course.isActive) {
+            continue;
+          }
+
+          const reservedSeat = course.reservedSeats[category];
+
+          const updatedCourse = await Course.findOneAndUpdate(
+            {
+              _id: course._id,
+              [`filledSeats.${category}`]: {
+                $lt: reservedSeat,
+              },
+            },
+            {
+              $inc: {
+                [`filledSeats.${category}`]: 1,
+              },
+            },
+            {
+              new: true,
+              session,
+            },
+          );
+
+          // No seat available
+          if (!updatedCourse) {
+            await AllocationLog.create(
+              [
+                {
+                  allocation: allocationDoc._id,
+                  application: application._id,
+                  student: application.student._id,
+                  studentId: application.studentId,
+                  course: course._id,
+                  courseId: course.courseId,
+                  priority: preference.priority,
+                  category,
+                  action: "NO_SEAT",
+                  message: `No ${category} seat available in ${course.courseName}.`,
+                  createdBy: req.user._id,
+                },
+              ],
+              { session },
+            );
+
+            if (preference.priority < 3) {
+              await AllocationLog.create(
+                [
+                  {
+                    allocation: allocationDoc._id,
+                    application: application._id,
+                    student: application.student._id,
+                    studentId: application.studentId,
+                    course: course._id,
+                    courseId: course.courseId,
+                    priority: preference.priority,
+                    category,
+                    action: "NEXT_PREFERENCE",
+                    message: `Checking Preference ${preference.priority + 1}.`,
+                    createdBy: req.user._id,
+                  },
+                ],
+                { session },
+              );
+            }
+
+            continue;
+          }
+
+          // Seat allocated
+          allocationDoc.course = updatedCourse._id;
+          allocationDoc.courseId = updatedCourse.courseId;
+          allocationDoc.allocatedPreference = preference.priority;
+          allocationDoc.allocationStatus = "ALLOCATED";
+          allocationDoc.remarks = "Seat Allocated";
+
+          await allocationDoc.save({ session });
+
+          application.status = "ALLOCATED";
+          application.allocationStatus = true;
+
+          await application.save({ session });
+
+          await AllocationLog.create(
+            [
+              {
+                allocation: allocationDoc._id,
+                application: application._id,
+                student: application.student._id,
+                studentId: application.studentId,
+                course: updatedCourse._id,
+                courseId: updatedCourse.courseId,
+                priority: preference.priority,
+                category,
+                action: "ALLOCATED",
+                message: `Allocated in ${updatedCourse.courseName} (Preference ${preference.priority})`,
+                createdBy: req.user._id,
+              },
+            ],
+            { session },
+          );
+
+          allocatedCount++;
+          allocated = true;
+
+          break;
+        }
+
+        // All preferences failed
+        if (!allocated) {
+          application.status = "REJECTED";
+          application.allocationStatus = true;
+
+          await application.save({
+            session,
+          });
+
+          allocationDoc.allocationStatus = "REJECTED";
+          allocationDoc.remarks = "No seats available";
+
+          await allocationDoc.save({
+            session,
+          });
+
+          await AllocationLog.create(
+            [
+              {
+                allocation: allocationDoc._id,
+                application: application._id,
+                student: application.student._id,
+                studentId: application.studentId,
+                category,
+                action: "REJECTED",
+                message: "No seats available in any preferred course.",
+                createdBy: req.user._id,
+              },
+            ],
+            {
+              session,
+            },
+          );
+
+          rejectedCount++;
+        }
+
+        // Allocation completed log
+        await AllocationLog.create(
+          [
+            {
+              allocation: allocationDoc._id,
+              application: application._id,
+              student: application.student._id,
+              studentId: application.studentId,
+              course: allocationDoc.course,
+              courseId: allocationDoc.courseId,
+              priority: allocationDoc.allocatedPreference,
+              category,
+              action: "COMPLETED",
+              message: "Allocation process completed.",
+              createdBy: req.user._id,
+            },
+          ],
+          {
+            session,
+          },
+        );
+        await session.commitTransaction();
+      } catch (err) {
+        await session.abortTransaction();
+        throw err;
+      } finally {
+        session.endSession();
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Course allocation completed successfully.",
+      summary: {
+        totalApplications: applications.length,
+        allocated: allocatedCount,
+        rejected: rejectedCount,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAllAllocations = async (req, res, next) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      allocationStatus,
+      category,
+      course,
+    } = req.query;
+
+    const filter = {};
+
+    // Search
+    if (search) {
+      filter.$or = [
+        {
+          allocationId: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          studentId: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      ];
+    }
+
+    // Allocation Status Filter
+    if (allocationStatus) {
+      filter.allocationStatus = allocationStatus;
+    }
+
+    // Category Filter
+    if (category) {
+      filter.category = category;
+    }
+
+    // Course Filter
+    if (course) {
+      filter.course = course;
+    }
+
+    const totalRecords = await Allocation.countDocuments(filter);
+
+    const allocations = await Allocation.find(filter)
+      .populate("student", "userId name email")
+      .populate("course", "courseId courseCode courseName academicYear")
+      .populate("allocatedBy", "userId name")
+      .sort({
+        createdAt: -1,
+      })
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit));
+
+    const totalPages = Math.ceil(totalRecords / Number(limit));
+
+    res.status(200).json({
+      success: true,
+      totalRecords,
+      currentPage: Number(page),
+      totalPages,
+      hasPreviousPage: Number(page) > 1,
+      hasNextPage: Number(page) < totalPages,
+      data: allocations,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAllocationById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const filter = id.match(/^[0-9a-fA-F]{24}$/)
+      ? {
+          _id: id,
+        }
+      : {
+          allocationId: id,
+        };
+
+    const allocation = await Allocation.findOne(filter)
+      .populate("student", "userId name email")
+      .populate("course", "courseId courseCode courseName academicYear")
+      .populate("application")
+      .populate("allocatedBy", "userId name");
+
+    if (!allocation) {
+      const error = new Error("Allocation not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: allocation,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  allocateCourses,
+  getAllAllocations,
+  getAllocationById,
+};
