@@ -408,8 +408,46 @@ const getAllocationById = async (req, res, next) => {
   }
 };
 
+const getDashboardStats = async (req, res, next) => {
+  try {
+    const [
+      totalStudents,
+      totalCourses,
+      totalApplications,
+      pendingApps,
+      allocatedApps,
+      rejectedApps,
+      totalAllocations,
+    ] = await Promise.all([
+      User.countDocuments({ role: "STUDENT" }),
+      Course.countDocuments(),
+      Application.countDocuments(),
+      Application.countDocuments({ status: "PENDING" }),
+      Application.countDocuments({ status: "ALLOCATED" }),
+      Application.countDocuments({ status: "REJECTED" }),
+      Allocation.countDocuments(),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalStudents,
+        totalCourses,
+        totalApplications,
+        pendingApps,
+        allocatedApps,
+        rejectedApps,
+        allocationProcessed: totalAllocations > 0,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   allocateCourses,
   getAllAllocations,
   getAllocationById,
+  getDashboardStats,
 };
