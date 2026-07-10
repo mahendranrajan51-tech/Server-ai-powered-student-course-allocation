@@ -341,7 +341,7 @@ const getAllAllocations = async (req, res, next) => {
     const totalRecords = await Allocation.countDocuments(filter);
 
     const allocations = await Allocation.find(filter)
-      .populate("student", "userId name email")
+      .populate("student", "userId name email category")
       .populate("course", "courseId courseCode courseName academicYear")
       .populate("allocatedBy", "userId name")
       .sort({
@@ -372,11 +372,11 @@ const getAllocationById = async (req, res, next) => {
 
     const filter = id.match(/^[0-9a-fA-F]{24}$/)
       ? {
-          _id: id,
-        }
+        _id: id,
+      }
       : {
-          allocationId: id,
-        };
+        allocationId: id,
+      };
 
     const allocation = await Allocation.findOne(filter)
       .populate("student", "userId name email")
