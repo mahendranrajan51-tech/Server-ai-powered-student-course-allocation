@@ -1,5 +1,6 @@
 const Allocation = require("../models/Allocation.js");
 const Application = require("../models/Application.js");
+const Course = require("../models/Course.js");
 
 const getAllocationCount = async () => {
 
@@ -394,9 +395,14 @@ const getHighestRejection = async () => {
 
 };
 
+const getCategoryCourseBreakdown = async () => {
+    return await Course.find({}, "courseCode courseName reservedSeats filledSeats");
+};
+
 module.exports = {
     getAllocationCount,
     getCategorySummary,
     getMissedFirstPreference,
-    getHighestRejection
+    getHighestRejection,
+    getCategoryCourseBreakdown
 }

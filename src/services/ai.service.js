@@ -11,6 +11,7 @@ allocation_count
 missed_first_preference
 highest_rejection
 category_summary
+category_course_breakdown
 
 Only return ONE WORD.
 

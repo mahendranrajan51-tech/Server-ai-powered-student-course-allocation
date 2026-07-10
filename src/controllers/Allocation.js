@@ -10,7 +10,8 @@ const {
   getAllocationCount,
   getMissedFirstPreference,
   getHighestRejection,
-  getCategorySummary
+  getCategorySummary,
+  getCategoryCourseBreakdown
 } = require("../services/allocation.service.js");
 const { askGemini } = require("../utils/gemini.js");
 
@@ -538,6 +539,10 @@ const handleAiQuery = async (req, res) => {
       data = await getCategorySummary();
       break;
 
+    case "category_course_breakdown":
+      data = await getCategoryCourseBreakdown();
+      break;
+
     default:
       return res.status(400).json({
         message: "Unsupported question."
@@ -562,6 +567,8 @@ ${JSON.stringify(data, null, 2)}
 Do not invent information.
 
 Format using markdown.
+
+For category and course based allocate counts, make sure to list them clearly in this format (e.g. ST and CSE - 10/10 filled), grouped by course. Use markdown bullet points.
 
 `;
 
