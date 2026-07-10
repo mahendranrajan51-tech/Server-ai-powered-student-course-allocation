@@ -7,11 +7,13 @@ const {
   logoutUser,
   getAllUsers,
   getUserById,
+  getMe,
 } = require("../controllers/User");
 
 userRouter.post("/register", registerUser);
 userRouter.post("/login", loginUser);
 userRouter.post("/logout", protect, logoutUser);
+userRouter.get("/me", protect, getMe);
 userRouter.get("/profile/:id", protect, getUserById);
 userRouter.get("/", protect, authorize("ADMIN"), getAllUsers);
 
