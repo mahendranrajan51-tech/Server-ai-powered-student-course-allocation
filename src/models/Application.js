@@ -40,16 +40,16 @@ const applicationSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
-      max: 100,
+      max: 600,
     },
 
     preferences: {
       type: [preferenceSchema],
       validate: {
         validator: function (value) {
-          return value.length === 3;
+          return value && value.length >= 1 && value.length <= 3;
         },
-        message: "Exactly 3 course preferences are required.",
+        message: "At least 1 and up to 3 course preferences are required.",
       },
     },
 
@@ -84,20 +84,6 @@ applicationSchema.pre("save", async function () {
   );
 
   this.applicationId = `APP${String(counter.sequence).padStart(7, "0")}`;
-});
-
-applicationSchema.pre("validate", function (next) {
-  const courseIds = this.preferences.map((preference) =>
-    preference.course.toString(),
-  );
-
-  const uniqueCourseIds = [...new Set(courseIds)];
-
-  if (courseIds.length !== uniqueCourseIds.length) {
-    return next(new Error("Duplicate course preferences are not allowed."));
-  }
-
-  next();
 });
 
 applicationSchema.index(

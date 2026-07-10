@@ -143,7 +143,8 @@ const allocateCourses = async (req, res, next) => {
               { session },
             );
 
-            if (preference.priority < 3) {
+            const hasNextPref = preferences.some(p => p.priority === preference.priority + 1);
+            if (hasNextPref) {
               await AllocationLog.create(
                 [
                   {

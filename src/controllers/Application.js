@@ -11,8 +11,15 @@ const createApplication = async (req, res, next) => {
       throw error;
     }
 
-    if (preferences.length !== 3) {
-      const error = new Error("Exactly 3 preferences are required.");
+    if (!Array.isArray(preferences) || preferences.length < 1 || preferences.length > 3) {
+      const error = new Error("At least 1 and up to 3 preferences are required.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const hasFirstPreference = preferences.some((p) => p.priority === 1);
+    if (!hasFirstPreference) {
+      const error = new Error("First preference is required.");
       error.statusCode = 400;
       throw error;
     }
@@ -38,7 +45,7 @@ const createApplication = async (req, res, next) => {
       isActive: true,
     });
 
-    if (courses.length !== 3) {
+    if (courses.length !== preferences.length) {
       const error = new Error("One or more selected courses are invalid.");
       error.statusCode = 400;
       throw error;
@@ -90,7 +97,7 @@ const getAllApplications = async (req, res, next) => {
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     const applications = await Application.find(filter)
-      .populate("student", "userId name email")
+      .populate("student", "userId name email category")
       .populate("preferences.course", "courseCode courseName")
       .sort({ applicationDate: -1 })
       .skip((currentPage - 1) * pageSize)
