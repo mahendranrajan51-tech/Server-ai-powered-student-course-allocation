@@ -74,22 +74,16 @@ const applicationSchema = new mongoose.Schema(
   },
 );
 
-applicationSchema.pre("save", async function (next) {
-  try {
-    if (!this.isNew) return next();
+applicationSchema.pre("save", async function () {
+  if (!this.isNew) return;
 
-    const counter = await Counter.findOneAndUpdate(
-      { name: "application" },
-      { $inc: { sequence: 1 } },
-      { new: true, upsert: true },
-    );
+  const counter = await Counter.findOneAndUpdate(
+    { name: "application" },
+    { $inc: { sequence: 1 } },
+    { new: true, upsert: true },
+  );
 
-    this.applicationId = `APP${String(counter.sequence).padStart(7, "0")}`;
-
-    next();
-  } catch (err) {
-    next(err);
-  }
+  this.applicationId = `APP${String(counter.sequence).padStart(7, "0")}`;
 });
 
 applicationSchema.pre("validate", function (next) {

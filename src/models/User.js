@@ -60,32 +60,26 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-userSchema.pre("save", async function (next) {
-  try {
-    if (!this.isNew) return next();
+userSchema.pre("save", async function () {
+  if (!this.isNew) return;
 
-    if (this.userId) return next();
+  if (this.userId) return;
 
-    if (this.role === "ADMIN") {
-      this.userId = "ADM0001";
-      return next();
-    }
-
-    const counter = await Counter.findOneAndUpdate(
-      { name: "student" },
-      { $inc: { sequence: 1 } },
-      {
-        new: true,
-        upsert: true,
-      },
-    );
-
-    this.userId = `STU${String(counter.sequence).padStart(7, "0")}`;
-
-    next();
-  } catch (error) {
-    next(error);
+  if (this.role === "ADMIN") {
+    this.userId = "ADM0001";
+    return;
   }
+
+  const counter = await Counter.findOneAndUpdate(
+    { name: "student" },
+    { $inc: { sequence: 1 } },
+    {
+      new: true,
+      upsert: true,
+    },
+  );
+
+  this.userId = `STU${String(counter.sequence).padStart(7, "0")}`;
 });
 
 userSchema.index({ email: 1 }, { unique: true });

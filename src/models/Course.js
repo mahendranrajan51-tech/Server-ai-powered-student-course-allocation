@@ -92,22 +92,16 @@ const courseSchema = new mongoose.Schema(
   },
 );
 
-courseSchema.pre("save", async function (next) {
-  try {
-    if (!this.isNew) return next();
+courseSchema.pre("save", async function () {
+  if (!this.isNew) return;
 
-    const counter = await Counter.findOneAndUpdate(
-      { name: "course" },
-      { $inc: { sequence: 1 } },
-      { new: true, upsert: true },
-    );
+  const counter = await Counter.findOneAndUpdate(
+    { name: "course" },
+    { $inc: { sequence: 1 } },
+    { new: true, upsert: true },
+  );
 
-    this.courseId = `CRS${String(counter.sequence).padStart(6, "0")}`;
-
-    next();
-  } catch (err) {
-    next(err);
-  }
+  this.courseId = `CRS${String(counter.sequence).padStart(6, "0")}`;
 });
 
 courseSchema.index(

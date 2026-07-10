@@ -54,7 +54,6 @@ const registerUser = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "Registration Successful",
-      data: user,
     });
   } catch (err) {
     next(err);
@@ -101,10 +100,12 @@ const loginUser = async (req, res, next) => {
       await cookieOptions(process.env.IS_PRODUCTION === "true"),
     );
 
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
     res.json({
       success: true,
       message: "Login Successful",
-      data: user,
     });
   } catch (err) {
     next(err);
