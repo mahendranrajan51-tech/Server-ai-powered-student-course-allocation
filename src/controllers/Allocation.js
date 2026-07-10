@@ -7,15 +7,6 @@ const mongoose = require("mongoose");
 
 const allocateCourses = async (req, res, next) => {
   try {
-    // Prevent running allocation twice
-    const allocationExists = await Allocation.findOne();
-
-    if (allocationExists) {
-      const error = new Error("Allocation has already been completed.");
-      error.statusCode = 400;
-      throw error;
-    }
-
     // Get all pending applications
     const applications = await Application.find({
       status: "PENDING",
