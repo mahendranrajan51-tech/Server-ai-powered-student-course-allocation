@@ -411,6 +411,8 @@ const getDashboardStats = async (req, res, next) => {
       allocatedApps,
       rejectedApps,
       totalAllocations,
+      courses,
+      categoryAllocationsAgg,
     ] = await Promise.all([
       User.countDocuments({ role: "STUDENT" }),
       Course.countDocuments(),
@@ -419,7 +421,63 @@ const getDashboardStats = async (req, res, next) => {
       Application.countDocuments({ status: "ALLOCATED" }),
       Application.countDocuments({ status: "REJECTED" }),
       Allocation.countDocuments(),
+      Course.find(),
+      Allocation.aggregate([
+        { $match: { allocationStatus: "ALLOCATED" } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "student",
+            foreignField: "_id",
+            as: "studentInfo",
+          },
+        },
+        { $unwind: "$studentInfo" },
+        {
+          $group: {
+            _id: "$studentInfo.category",
+            count: { $sum: 1 },
+          },
+        },
+      ]),
     ]);
+
+    let totalSeats = 0;
+    let filledSeats = 0;
+
+    const courseStats = courses.map((c) => {
+      const filled =
+        (c.filledSeats.GENERAL || 0) +
+        (c.filledSeats.OBC || 0) +
+        (c.filledSeats.SC || 0) +
+        (c.filledSeats.ST || 0);
+      
+      totalSeats += c.totalSeats || 0;
+      filledSeats += filled;
+
+      return {
+        courseCode: c.courseCode,
+        courseName: c.courseName,
+        totalSeats: c.totalSeats,
+        filledSeats: filled,
+        availableSeats: Math.max(0, (c.totalSeats || 0) - filled),
+        reservedSeats: c.reservedSeats,
+        filledSeatsByCategory: c.filledSeats,
+      };
+    });
+
+    const categoryAllocations = {
+      GENERAL: 0,
+      OBC: 0,
+      SC: 0,
+      ST: 0,
+    };
+
+    categoryAllocationsAgg.forEach((item) => {
+      if (item._id && categoryAllocations[item._id] !== undefined) {
+        categoryAllocations[item._id] = item.count;
+      }
+    });
 
     res.status(200).json({
       success: true,
@@ -431,6 +489,13 @@ const getDashboardStats = async (req, res, next) => {
         allocatedApps,
         rejectedApps,
         allocationProcessed: totalAllocations > 0,
+        seatStats: {
+          totalSeats,
+          filledSeats,
+          availableSeats: Math.max(0, totalSeats - filledSeats),
+        },
+        categoryAllocations,
+        courseStats,
       },
     });
   } catch (err) {
