@@ -321,7 +321,9 @@ const getAllAllocations = async (req, res, next) => {
 
     // Category Filter
     if (category) {
-      filter.category = category;
+      const students = await User.find({ category }).select("_id");
+      const studentIds = students.map((s) => s._id);
+      filter.student = { $in: studentIds };
     }
 
     // Course Filter
