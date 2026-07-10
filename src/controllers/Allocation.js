@@ -5,6 +5,15 @@ const Course = require("../models/Course");
 const User = require("../models/User");
 const mongoose = require("mongoose");
 
+const { detectIntent } = require("../services/ai.service.js");
+const {
+  getAllocationCount,
+  getMissedFirstPreference,
+  getHighestRejection,
+  getCategorySummary
+} = require("../services/allocation.service.js");
+const { askGemini } = require("../utils/gemini.js");
+
 const allocateCourses = async (req, res, next) => {
   try {
     // Get all pending applications
@@ -451,7 +460,7 @@ const getDashboardStats = async (req, res, next) => {
         (c.filledSeats.OBC || 0) +
         (c.filledSeats.SC || 0) +
         (c.filledSeats.ST || 0);
-      
+
       totalSeats += c.totalSeats || 0;
       filledSeats += filled;
 
@@ -503,9 +512,74 @@ const getDashboardStats = async (req, res, next) => {
   }
 };
 
+const handleAiQuery = async (req, res) => {
+
+  const { query } = req.body;
+
+  const intent = await detectIntent(query);
+
+  let data;
+
+  switch (intent) {
+
+    case "allocation_count":
+      data = await getAllocationCount();
+      break;
+
+    case "missed_first_preference":
+      data = await getMissedFirstPreference();
+      break;
+
+    case "highest_rejection":
+      data = await getHighestRejection();
+      break;
+
+    case "category_summary":
+      data = await getCategorySummary();
+      break;
+
+    default:
+      return res.status(400).json({
+        message: "Unsupported question."
+      });
+
+  }
+
+  const prompt = `
+
+You are an AI Assistant.
+
+Answer professionally.
+
+Question:
+
+${query}
+
+Database Result:
+
+${JSON.stringify(data, null, 2)}
+
+Do not invent information.
+
+Format using markdown.
+
+`;
+
+  const answer = await askGemini(prompt);
+
+  res.json({
+
+    success: true,
+    data: { answer }
+
+  });
+
+};
+
 module.exports = {
   allocateCourses,
   getAllAllocations,
   getAllocationById,
   getDashboardStats,
+  handleAiQuery,
 };
